@@ -55,12 +55,28 @@ jobs:
       - name: Download & Extract Skia
         shell: powershell
         run: |
-          Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip" -OutFile "skia.zip" -UseBasicParsing
+          $ProgressPreference = 'SilentlyContinue'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+          function Get-WithRetry($Url, $OutFile) {
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
+                return
+              } catch {
+                Write-Host "Attempt $i failed: $_"
+                if ($i -eq 5) { throw }
+                Start-Sleep -Seconds (5 * $i)
+              }
+            }
+          }
+
+          Get-WithRetry "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Windows-Release-x64.zip" "skia.zip"
           Expand-Archive -Force "skia.zip" "skia"
-          
+
           # Download icudtl.dat (required for ICU support)
-          mkdir skia\out\Release-x64 -Force
-          Invoke-WebRequest -Uri "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat" -OutFile "skia/out/Release-x64/icudtl.dat" -UseBasicParsing
+          New-Item -ItemType Directory -Force -Path "skia\out\Release-x64" | Out-Null
+          Get-WithRetry "https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat" "skia\out\Release-x64\icudtl.dat"
           Write-Host "Skia extracted successfully with icudtl.dat"
 
       - name: Initialize MSVC Environment
@@ -124,9 +140,10 @@ jobs:
 
       - name: Download & Extract Skia
         run: |
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64-libstdc++.zip
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-Linux-Release-x64-libstdc++.zip
           unzip Skia-Linux-Release-x64-libstdc++.zip -d skia
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-x64/icudtl.dat
+          mkdir -p skia/out/Release-x64
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-x64/icudtl.dat
 
       - name: Configure Build
         run: |
@@ -214,7 +231,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install ninja
+          brew install ninja wget
 
       - name: Clone Aseprite Source
         run: |
@@ -222,9 +239,10 @@ jobs:
 
       - name: Download & Extract Skia
         run: |
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-arm64.zip
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-arm64.zip
           unzip Skia-macOS-Release-arm64.zip -d skia
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-arm64/icudtl.dat
+          mkdir -p skia/out/Release-arm64
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-arm64/icudtl.dat
 
       - name: Configure Build
         run: |
@@ -269,7 +287,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          brew install ninja
+          brew install ninja wget
 
       - name: Clone Aseprite Source
         run: |
@@ -277,9 +295,10 @@ jobs:
 
       - name: Download & Extract Skia
         run: |
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-x64.zip
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/Skia-macOS-Release-x64.zip
           unzip Skia-macOS-Release-x64.zip -d skia
-          wget https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-x64/icudtl.dat
+          mkdir -p skia/out/Release-x64
+          wget --tries=5 --waitretry=5 --retry-connrefused https://github.com/aseprite/skia/releases/download/m124-08a5439a6b/icudtl.dat -O skia/out/Release-x64/icudtl.dat
 
       - name: Configure Build
         run: |
